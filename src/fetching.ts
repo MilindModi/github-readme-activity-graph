@@ -5,10 +5,11 @@ import {
   week,
   contributionCount,
 } from '../interfaces/interface';
-import { fetcher, gqlQuery } from '../types/types';
+import { fetchContribution, fetcher, gqlQuery } from '../types/types';
 
 require('dotenv').config('../');
 
+//GraphQl query to get everyday contributions as a response
 export const graphqlQuery: gqlQuery = (username: string) => {
   return {
     query: `
@@ -40,6 +41,7 @@ const headers = {
   Authorization: `bearer ${token}`,
 };
 
+//Fetching data from GitHub GraphQl API
 export const fetch: fetcher = (data: query) =>
   axios({
     url: 'https://api.github.com/graphql',
@@ -48,11 +50,11 @@ export const fetch: fetcher = (data: query) =>
     data,
   });
 
-export const fetchContributions = async (
+export const fetchContributions: fetchContribution = async (
   username: string,
-  graphqlQuery: gqlQuery,
+  graphqlQuery: gqlQuery, //Dependency Injection
   fetch: fetcher
-): Promise<userDetails | string> => {
+) => {
   try {
     const apiResponse = await fetch(graphqlQuery(username));
     if (apiResponse.data.data.user === null)
@@ -62,17 +64,19 @@ export const fetchContributions = async (
         contributions: [],
         name: apiResponse.data.data.user.name,
       };
+      //filtering the week data from API response
       const weeks: week[] =
         apiResponse.data.data.user.contributionsCollection.contributionCalendar
           .weeks;
+      //slicing last 6 weeks
       weeks.slice(weeks.length - 6, weeks.length).map((week: week) =>
         week.contributionDays.map((contributionCount: contributionCount) => {
           userData.contributions.push(contributionCount.contributionCount);
         })
       );
 
-      const presentDay = new Date().getDay();
       //returning data of last 31 days
+      const presentDay = new Date().getDay();
       userData.contributions = userData.contributions.slice(
         5 + presentDay,
         36 + presentDay
